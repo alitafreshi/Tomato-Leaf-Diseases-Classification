@@ -223,9 +223,8 @@ flowchart TD
 
 | پارامتر | مقدار |
 |---|---|
-| `n_estimators` | ۳۰۰ |
-| `max_depth` | `None` |
-| `min_samples_split` | ۲ |
+| `n_estimators` | بهینه‌شده (بخش [بهینه‌سازی ابرپارامترها](#بهینه‌سازی-ابرپارامترها)) |
+| `max_depth` | بهینه‌شده (بخش [بهینه‌سازی ابرپارامترها](#بهینه‌سازی-ابرپارامترها)) |
 | `class_weight` | `"balanced_subsample"` |
 | `random_state` | ۴۲ |
 | `n_jobs` | ‎-1 |
@@ -238,6 +237,26 @@ flowchart TD
 |---|---|
 | `batch_size` | ۶۴ |
 | `verbose` | ۱ |
+
+## بهینه‌سازی ابرپارامترها
+
+مقادیر `n_estimators` و `max_depth` در Random Forest به‌جای تعیین دستی، با یک جست‌وجوی مستندشده انتخاب می‌شوند (`min_samples_split` حذف شد، زیرا مقدار ۲ پیش‌فرض scikit-learn است).
+
+- **روش:** `RandomizedSearchCV` با `n_iter=30`، `scoring="accuracy"`، `random_state=42` و `refit=False`.
+- **داده:** مجموعهٔ اعتبارسنجی. یک `PredefinedSplit` مدل را روی ویژگی‌های آموزش آموزش می‌دهد و روی ویژگی‌های اعتبارسنجی امتیاز می‌دهد (یک fold).
+- **فضای جست‌وجو:** `n_estimators` ~ `randint(50, 501)`؛ `max_depth` در `[None] + list(range(5, 41))`.
+- **پارامترهای ثابت:** `class_weight="balanced_subsample"`، `random_state=42`، `n_jobs=-1`.
+- **قاعدهٔ انتخاب:** ساده‌ترین مدل (کمترین تعداد درخت، سپس کم‌عمق‌ترین؛ `None` عمیق‌ترین محسوب می‌شود) که دقت اعتبارسنجی آن حداکثر ۰٫۰۰۲ با بهترین مقدار فاصله دارد.
+- **آموزش نهایی:** فقط روی ویژگی‌های آموزش؛ مجموعهٔ آزمون فقط یک بار ارزیابی می‌شود.
+- **شواهد:** `rf_tuning_results.xlsx` (هر ۳۰ آزمایش) و `rf_tuning_plot.png`.
+- **نتیجه:** `n_estimators` انتخاب‌شده = TBD-AFTER-KAGGLE-RUN، `max_depth` = TBD-AFTER-KAGGLE-RUN؛ دقت اعتبارسنجی TBD-AFTER-KAGGLE-RUN (مبنا با ۳۰۰ درخت و عمق `None`: TBD-AFTER-KAGGLE-RUN)؛ دقت نهایی آزمون TBD-AFTER-KAGGLE-RUN.
+
+نکات دفاع:
+
+۱. **مجموعهٔ اعتبارسنجی، نه CV:** ویژگی‌های آموزش CNN بیش‌برازش شده‌اند، پس CV روی آن‌ها خوش‌بینانه است.
+۲. **جست‌وجوی تصادفی، نه grid:** با بودجهٔ برابر، جست‌وجوی تصادفی کارآمدتر از grid است (Bergstra & Bengio, 2012).
+۳. **قاعدهٔ انتخاب ساده‌ترین مدل:** اختلاف‌های کمتر از ۰٫۰۰۲ در حد نویز هستند، پس مدل ساده‌تر ترجیح داده می‌شود.
+۴. **استفادهٔ یک‌باره از مجموعهٔ آزمون:** این مجموعه فقط برای گزارش نهایی استفاده می‌شود.
 
 ## روند آموزش مدل
 
@@ -277,6 +296,7 @@ flowchart TD
 - نمودار heatmap ماتریس درهم‌ریختگی CNN به‌صورت درصدی با عنوان «CNN-Softmax Confusion Matrix».
 - چاپ زمان آموزش و زمان پیش‌بینی Random Forest بر حسب ثانیه.
 - چاپ accuracy مدل Random Forest روی مجموعهٔ آزمون.
+- نتایج بهینه‌سازی Random Forest که در `rf_tuning_results.xlsx` و `rf_tuning_plot.png` ذخیره می‌شود.
 - گزارش طبقه‌بندی کلاس‌به‌کلاس Random Forest که چاپ و در فایل `rf_classification_report.xlsx` ذخیره می‌شود.
 - نمودار heatmap ماتریس درهم‌ریختگی Random Forest به‌صورت درصدی با عنوان «CNN Features + Random Forest Confusion Matrix».
 

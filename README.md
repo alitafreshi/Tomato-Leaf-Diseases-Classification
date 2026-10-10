@@ -212,9 +212,8 @@ Because `EarlyStopping` is configured, 50 is the maximum number of epochs; train
 
 | Parameter | Value |
 |---|---|
-| `n_estimators` | 300 |
-| `max_depth` | `None` |
-| `min_samples_split` | 2 |
+| `n_estimators` | tuned (see [Hyperparameter optimization](#hyperparameter-optimization)) |
+| `max_depth` | tuned (see [Hyperparameter optimization](#hyperparameter-optimization)) |
 | `class_weight` | `"balanced_subsample"` |
 | `random_state` | 42 |
 | `n_jobs` | -1 |
@@ -227,6 +226,26 @@ Because `EarlyStopping` is configured, 50 is the maximum number of epochs; train
 |---|---|
 | `batch_size` | 64 |
 | `verbose` | 1 |
+
+## Hyperparameter optimization
+
+`n_estimators` and `max_depth` of the Random Forest are chosen by a documented search instead of fixed by hand (`min_samples_split` was dropped because 2 is the scikit-learn default).
+
+- **Method:** `RandomizedSearchCV`, `n_iter=30`, `scoring="accuracy"`, `random_state=42`, `refit=False`.
+- **Data:** the validation split. A `PredefinedSplit` trains on the train features and scores on the validation features (a single fold).
+- **Search space:** `n_estimators` ~ `randint(50, 501)`; `max_depth` in `[None] + list(range(5, 41))`.
+- **Fixed:** `class_weight="balanced_subsample"`, `random_state=42`, `n_jobs=-1`.
+- **Selection rule:** the simplest model (fewest trees, then shallowest; `None` counts as deepest) whose validation accuracy is within 0.002 of the best.
+- **Final fit:** train features only; the test set is evaluated once.
+- **Evidence:** `rf_tuning_results.xlsx` (all 30 trials) and `rf_tuning_plot.png`.
+- **Result:** chosen `n_estimators` = TBD-AFTER-KAGGLE-RUN, `max_depth` = TBD-AFTER-KAGGLE-RUN; validation accuracy TBD-AFTER-KAGGLE-RUN (baseline 300 trees / depth `None`: TBD-AFTER-KAGGLE-RUN); final test accuracy TBD-AFTER-KAGGLE-RUN.
+
+Defense talking points:
+
+1. **Validation set, not CV:** the CNN's train features are overfit, so cross-validation on them would be optimistic.
+2. **Random, not grid:** random search is more efficient than grid search at an equal budget (Bergstra & Bengio, 2012).
+3. **Tie-break:** validation differences below 0.002 are within noise, so the simplest model is preferred.
+4. **Test set used once:** it is touched only for the final report.
 
 ## Training Procedure
 
@@ -266,6 +285,7 @@ The notebook implements the following result-producing logic:
 - A percentage-normalized CNN confusion matrix heatmap titled "CNN-Softmax Confusion Matrix".
 - Printed Random Forest training and prediction times in seconds.
 - Printed Random Forest test accuracy.
+- Random Forest tuning results saved to `rf_tuning_results.xlsx` and `rf_tuning_plot.png`.
 - A per-class Random Forest classification report, printed and exported to `rf_classification_report.xlsx`.
 - A percentage-normalized Random Forest confusion matrix heatmap titled "CNN Features + Random Forest Confusion Matrix".
 - 
